@@ -1,0 +1,81 @@
+diff -rupN tools/date.c toolsnew/date.c
+--- tools/date.c	2013-04-18 04:50:28.000000000 +0800
++++ toolsnew/date.c	2020-01-13 17:24:59.000000000 +0800
+@@ -37,7 +37,7 @@
+ /*** includes ***/
+ #include <stdlib.h>
+ #ifndef USE_STDLIB_H
+-#include <malloc.h>
++#include <stdlib.h>
+ #endif
+ #include <stdio.h>
+ #include <math.h>
+diff -rupN tools/dist.c toolsnew/dist.c
+--- tools/dist.c	2013-04-18 04:50:24.000000000 +0800
++++ toolsnew/dist.c	2020-01-13 17:25:30.000000000 +0800
+@@ -38,7 +38,7 @@
+ #include <stdio.h>
+ #include <fcntl.h>
+ #include <assert.h>
+-#include <malloc.h>
++#include <stdlib.h>
+ #ifdef WIN32
+ #include <io.h>
+ #include <stdlib.h>
+@@ -52,7 +52,7 @@
+ #include <sys/types.h>
+ #endif
+ #ifndef USE_STDLIB_H
+-#include <malloc.h>
++#include <stdlib.h>
+ #endif
+ #include "config.h"
+ #include "decimal.h"
+diff -rupN tools/genrand.c toolsnew/genrand.c
+--- tools/genrand.c	2013-04-18 04:50:24.000000000 +0800
++++ toolsnew/genrand.c	2020-01-13 17:26:22.000000000 +0800
+@@ -54,6 +54,8 @@
+ #include "tables.h"
+ #include "streams.h"
+ 
++#define MAXINT INT_MAX
++
+ static long Mult = 16807;       /* the multiplier */
+ static long nQ = 127773;        /* the quotient MAXINT / Mult */
+ static long nR = 2836;          /* the remainder MAXINT % Mult */
+diff -rupN tools/misc.c toolsnew/misc.c
+--- tools/misc.c	2013-04-18 04:50:26.000000000 +0800
++++ toolsnew/misc.c	2020-01-13 17:26:58.000000000 +0800
+@@ -42,7 +42,7 @@
+ #include <ctype.h>
+ #include <math.h>
+ #ifndef _POSIX_SOURCE
+-#include <malloc.h>
++#include <stdlib.h>
+ #endif /* POSIX_SOURCE */
+ #include <fcntl.h>
+ #ifdef AIX
+diff -rupN tools/nulls.c toolsnew/nulls.c
+--- tools/nulls.c	2013-04-18 04:50:26.000000000 +0800
++++ toolsnew/nulls.c	2020-01-13 17:27:23.000000000 +0800
+@@ -39,6 +39,8 @@
+ #include "genrand.h"
+ #include "tdefs.h"
+ 
++#define MAXINT INT_MAX
++
+ /*
+ * Routine: nullCheck(int nColumn)
+ * Purpose: 
+diff -rupN tools/porting.h toolsnew/porting.h
+--- tools/porting.h	2013-04-18 04:50:28.000000000 +0800
++++ toolsnew/porting.h	2020-01-13 17:24:02.000000000 +0800
+@@ -43,7 +43,7 @@
+ #endif
+ 
+ #ifdef USE_VALUES_H
+-#include <values.h>
++#include <limits.h>
+ #endif
+ 
+ #ifdef USE_LIMITS_H
