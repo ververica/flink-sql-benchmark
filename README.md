@@ -4,7 +4,7 @@
 
 - Step 1: Prepare your flink environment.
 
-  - Prepare flink-conf.yaml: [Recommended Conf](https://github.com/JingsongLi/flink-sql-benchmark/blob/master/flink-conf.yaml).
+  - Prepare flink-conf.yaml: [Recommended Conf](https://github.com/ververica/flink-sql-benchmark/blob/master/flink-conf.yaml).
 
   - Setup hive integration: [Hive dependencies](https://ci.apache.org/projects/flink/flink-docs-master/dev/table/hive/#dependencies).
   
