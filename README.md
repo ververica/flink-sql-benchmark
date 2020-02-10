@@ -52,7 +52,7 @@
 
   - Modify flink version and hive version of `pom.xml`.
   
-  - `cd flink-tpcds`, `mvn clean install`
+  - `mvn clean install`
   
 - Step 3: Run
 
