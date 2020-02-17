@@ -56,6 +56,9 @@ public class Benchmark {
 	private static final Option ITERATIONS = new Option("i", "iterations", true,
 			"The number of iterations that will be run per case, default is 1.");
 
+	private static final Option PARALLELISM = new Option("p", "parallelism", true,
+			"The parallelism, default is 800.");
+
 	public static void main(String[] args) throws ParseException {
 		Options options = getOptions();
 		DefaultParser parser = new DefaultParser();
@@ -63,7 +66,8 @@ public class Benchmark {
 		run(
 				setUpEnv(
 						requireNonNull(line.getOptionValue(HIVE_CONF.getOpt())),
-						requireNonNull(line.getOptionValue(DATABASE.getOpt()))
+						requireNonNull(line.getOptionValue(DATABASE.getOpt())),
+						Integer.parseInt(line.getOptionValue(PARALLELISM.getOpt(), "800"))
 				),
 				getQueries(
 						line.getOptionValue(LOCATION.getOpt()),
@@ -127,7 +131,7 @@ public class Benchmark {
 		System.err.println(builder.toString());
 	}
 
-	private static TableEnvironment setUpEnv(String hiveConf, String database) {
+	private static TableEnvironment setUpEnv(String hiveConf, String database, int parallelism) {
 		EnvironmentSettings settings = EnvironmentSettings.newInstance().useBlinkPlanner().inBatchMode().build();
 		TableEnvironment tEnv = TableEnvironment.create(settings);
 
@@ -138,7 +142,7 @@ public class Benchmark {
 		tEnv.getConfig().getConfiguration().setLong(
 				OptimizerConfigOptions.TABLE_OPTIMIZER_BROADCAST_JOIN_THRESHOLD, 10485760L);
 		tEnv.getConfig().getConfiguration().setInteger(
-				ExecutionConfigOptions.TABLE_EXEC_RESOURCE_DEFAULT_PARALLELISM, 800);
+				ExecutionConfigOptions.TABLE_EXEC_RESOURCE_DEFAULT_PARALLELISM, parallelism);
 		tEnv.getConfig().getConfiguration().setInteger(
 				ExecutionConfigOptions.TABLE_EXEC_SORT_DEFAULT_LIMIT, 200);
 
@@ -157,6 +161,7 @@ public class Benchmark {
 		options.addOption(LOCATION);
 		options.addOption(QUERIES);
 		options.addOption(ITERATIONS);
+		options.addOption(PARALLELISM);
 		return options;
 	}
 }

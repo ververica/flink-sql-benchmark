@@ -60,6 +60,7 @@
   - optional `--location`: sql queries path, default using queries in jar.
   - optional `--queries`: sql query names. If the value is 'all', all queries will be executed. eg: 'q1.sql'.
   - optional `--iterations`: The number of iterations that will be run per case, default is 1.
+  - optional `--parallelism`: The parallelism, default is 800.
   
 ## Run benchmark in other systems
 
