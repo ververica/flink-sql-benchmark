@@ -57,6 +57,9 @@
 - Step 3: Run
 
   - `flink_home/bin/flink run -c com.ververica.flink.benchmark.Benchmark ./flink-tpcds-0.1-SNAPSHOT-jar-with-dependencies.jar --database tpcds_bin_orc_10000 --hive_conf hive_home/conf`
+  - optional `--location`: sql queries path, default using queries in jar.
+  - optional `--queries`: sql query names. If the value is 'all', all queries will be executed. eg: 'q1.sql'.
+  - optional `--iterations`: The number of iterations that will be run per case, default is 1.
   
 ## Run benchmark in other systems
 
