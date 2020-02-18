@@ -1,6 +1,8 @@
 # flink-sql-benchmark
 
-## Generate test hive dataset
+## TPC-DS benchmark
+
+### Generate test hive dataset
 
 - Step 1: Prepare your environment
 
@@ -32,11 +34,11 @@
 
   Once the data is loaded into Hive, you can use database `tpcds_bin_<FORMAT>_<SCALE_FACTOR>`to run the benchmark.
   
-## Run benchmark in flink
+### Run benchmark in flink
 
 - Step 1: Prepare your flink environment.
 
-  - Prepare flink-conf.yaml: [Recommended Conf](https://github.com/ververica/flink-sql-benchmark/blob/master/flink-conf.yaml).
+  - Prepare flink-conf.yaml: [Recommended Conf](https://github.com/ververica/flink-sql-benchmark/blob/master/flink-tpcds/flink-conf.yaml).
 
   - Setup hive integration: [Hive dependencies](https://ci.apache.org/projects/flink/flink-docs-master/dev/table/hive/#dependencies).
   
@@ -62,7 +64,7 @@
   - optional `--iterations`: The number of iterations that will be run per case, default is 1.
   - optional `--parallelism`: The parallelism, default is 800.
   
-## Run benchmark in other systems
+### Run benchmark in other systems
 
 Because the prepared test data is standard hive data, other calculation frameworks integrated with hive data can also run benchmark very simply. Please build your own environment and test it.
 
