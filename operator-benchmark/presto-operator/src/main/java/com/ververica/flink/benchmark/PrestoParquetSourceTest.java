@@ -209,9 +209,19 @@ public class PrestoParquetSourceTest {
 		Page page;
 		while ((page = reader.getNextPage()) != null) {
 			Block block0 = page.getBlock(0);
-			for (int i = 0; i < block0.getPositionCount(); i++) {
-				bh.consume(readDouble(block0, i));
-			}
+			Block block1 = page.getBlock(1);
+			Block block2 = page.getBlock(2);
+			Block block3 = page.getBlock(3);
+			Block block4 = page.getBlock(4);
+			Block block5 = page.getBlock(5);
+			Block block6 = page.getBlock(6);
+			bh.consume(readDouble(block0, 0));
+			bh.consume(readDouble(block1, 0));
+			bh.consume(readDouble(block2, 0));
+			bh.consume(readDouble(block3, 0));
+			bh.consume(readString(block4, 0));
+			bh.consume(readString(block5, 0));
+			bh.consume(readInt(block6, 0));
 		}
 		reader.close();
 	}
