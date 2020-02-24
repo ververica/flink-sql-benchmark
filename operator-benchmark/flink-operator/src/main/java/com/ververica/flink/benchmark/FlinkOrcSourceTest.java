@@ -44,6 +44,7 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,11 +54,11 @@ import java.util.stream.IntStream;
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.SampleTime)
 @Fork(1)
-@Warmup(iterations = 2)
-@Measurement(iterations = 3)
+@Warmup(iterations = 1)
+@Measurement(iterations = 1)
 public class FlinkOrcSourceTest {
 
-	private static final String FILE_PATH = "/Users/zhixin/data/tpc/004990_0.orc";
+	private static final String FILE_PATH = "/Users/zhixin/data/tpc/orc";
 	private static final String[] FIELD_NAMES = new String[] {
 			"ss_sold_date_sk",
 			"ss_sold_time_sk",
@@ -109,7 +110,7 @@ public class FlinkOrcSourceTest {
 			new DoubleType(),
 	};
 
-	private OrcColumnarRowSplitReader<VectorizedRowBatch> createReader() throws IOException {
+	private OrcColumnarRowSplitReader<VectorizedRowBatch> createReader(String path) throws IOException {
 		return OrcNoHiveSplitReaderUtil.genPartColumnarRowReader(
 				new Configuration(),
 				FIELD_NAMES,
@@ -119,47 +120,53 @@ public class FlinkOrcSourceTest {
 				IntStream.range(0, FIELD_NAMES.length).toArray(),
 				new ArrayList<>(),
 				2048,
-				new Path(FILE_PATH),
+				new Path(path),
 				0,
 				Long.MAX_VALUE);
 	}
 
 	@Benchmark
 	public void readVector(Blackhole bh) throws IOException {
-		OrcColumnarRowSplitReader reader = createReader();
-		while (!reader.reachedEnd()) {
-			ColumnarRow row = (ColumnarRow) reader.nextRecord(null);
-			bh.consume(row);
-			bh.consume(readLong(row, 0));
+		for (File file : new File(FILE_PATH).listFiles()) {
+			OrcColumnarRowSplitReader reader = createReader(file.getAbsolutePath());
+			while (!reader.reachedEnd()) {
+				ColumnarRow row = (ColumnarRow) reader.nextRecord(null);
+				bh.consume(row);
+				bh.consume(readLong(row, 0));
+			}
+			reader.close();
 		}
-		reader.close();
 	}
 
 	@Benchmark
 	public void readFieldsRarely(Blackhole bh) throws IOException {
-		OrcColumnarRowSplitReader reader = createReader();
-		int i = 0;
-		while (!reader.reachedEnd()) {
-			ColumnarRow row = (ColumnarRow) reader.nextRecord(null);
-			bh.consume(row);
-			bh.consume(readLong(row, 0));
-			i++;
-			if (i % 100 == 0) {
-				read(bh, row);
+		for (File file : new File(FILE_PATH).listFiles()) {
+			OrcColumnarRowSplitReader reader = createReader(file.getAbsolutePath());
+			int i = 0;
+			while (!reader.reachedEnd()) {
+				ColumnarRow row = (ColumnarRow) reader.nextRecord(null);
+				bh.consume(row);
+				bh.consume(readLong(row, 0));
+				i++;
+				if (i % 100 == 0) {
+					read(bh, row);
+				}
 			}
+			reader.close();
 		}
-		reader.close();
 	}
 
 	@Benchmark
 	public void readFields(Blackhole bh) throws IOException {
-		OrcColumnarRowSplitReader reader = createReader();
-		while (!reader.reachedEnd()) {
-			ColumnarRow row = (ColumnarRow) reader.nextRecord(null);
-			bh.consume(row);
-			read(bh, row);
+		for (File file : new File(FILE_PATH).listFiles()) {
+			OrcColumnarRowSplitReader reader = createReader(file.getAbsolutePath());
+			while (!reader.reachedEnd()) {
+				ColumnarRow row = (ColumnarRow) reader.nextRecord(null);
+				bh.consume(row);
+				read(bh, row);
+			}
+			reader.close();
 		}
-		reader.close();
 	}
 
 	private void read(Blackhole bh, ColumnarRow row) {

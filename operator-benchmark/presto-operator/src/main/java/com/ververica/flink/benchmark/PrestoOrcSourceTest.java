@@ -88,8 +88,8 @@ import static com.facebook.presto.hive.HiveType.toHiveType;
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.SampleTime)
 @Fork(1)
-@Warmup(iterations = 2)
-@Measurement(iterations = 3)
+@Warmup(iterations = 1)
+@Measurement(iterations = 1)
 public class PrestoOrcSourceTest {
 
 	private static final JobConf conf;
@@ -99,7 +99,7 @@ public class PrestoOrcSourceTest {
 		conf.set("fs.file.impl", "org.apache.hadoop.fs.RawLocalFileSystem");
 	}
 
-	private static final String FILE_PATH = "/Users/zhixin/data/tpc/004990_0.orc";
+	private static final String FILE_PATH = "/Users/zhixin/data/tpc/orc";
 	private static final String[] FIELD_NAMES = new String[] {
 			"ss_sold_date_sk",
 			"ss_sold_time_sk",
@@ -163,7 +163,7 @@ public class PrestoOrcSourceTest {
 				config, new OrcFileWriterConfig(), new ParquetFileWriterConfig()).getSessionProperties());
 	}
 
-	private ConnectorPageSource createReader() {
+	private ConnectorPageSource createReader(File file) {
 		HiveBatchPageSourceFactory pageSourceFactory = new OrcBatchPageSourceFactory(
 				new TypeRegistry(),
 				true,
@@ -174,7 +174,7 @@ public class PrestoOrcSourceTest {
 				new StorageStripeMetadataSource(),
 				new HadoopFileOpener());
 
-		return createPageSource(pageSourceFactory, session, new File(FILE_PATH), Arrays.asList(FIELD_NAMES),
+		return createPageSource(pageSourceFactory, session, file, Arrays.asList(FIELD_NAMES),
 				Arrays.asList(FIELD_TYPES), HiveStorageFormat.ORC);
 	}
 
@@ -235,26 +235,53 @@ public class PrestoOrcSourceTest {
 
 	@Benchmark
 	public void readVector(Blackhole bh) throws IOException {
-		ConnectorPageSource reader = createReader();
-		Page page;
-		while ((page = reader.getNextPage()) != null) {
-			for (int i = 0; i < FIELD_NAMES.length; i++) {
-				bh.consume(page.getBlock(i).getLoadedBlock());
+		for (File file : new File(FILE_PATH).listFiles()) {
+			ConnectorPageSource reader = createReader(file);
+			Page page;
+			while ((page = reader.getNextPage()) != null) {
+				for (int i = 0; i < FIELD_NAMES.length; i++) {
+					bh.consume(page.getBlock(i).getLoadedBlock());
+				}
 			}
+			reader.close();
 		}
-		reader.close();
 	}
 
 	@Benchmark
 	public void readFieldsRarely(Blackhole bh) throws IOException {
-		ConnectorPageSource reader = createReader();
-		Page page;
-		while ((page = reader.getNextPage()) != null) {
-			for (int i = 0; i < FIELD_NAMES.length; i++) {
-				bh.consume(page.getBlock(i).getLoadedBlock());
+		for (File file : new File(FILE_PATH).listFiles()) {
+			ConnectorPageSource reader = createReader(file);
+			Page page;
+			while ((page = reader.getNextPage()) != null) {
+				for (int i = 0; i < FIELD_NAMES.length; i++) {
+					bh.consume(page.getBlock(i).getLoadedBlock());
+				}
+				for (int i = 0; i < page.getBlock(0).getPositionCount(); i++) {
+					if (i % 100 == 0) {
+						for (int j = 0; j < 10; j++) {
+							bh.consume(readLong(page.getBlock(j), i));
+						}
+						bh.consume(readInt(page.getBlock(10), i));
+						for (int j = 11; j < 23; j++) {
+							bh.consume(readDouble(page.getBlock(j), i));
+						}
+					}
+				}
 			}
-			for (int i = 0; i < page.getBlock(0).getPositionCount(); i++) {
-				if (i % 100 == 0) {
+			reader.close();
+		}
+	}
+
+	@Benchmark
+	public void readFields(Blackhole bh) throws IOException {
+		for (File file : new File(FILE_PATH).listFiles()) {
+			ConnectorPageSource reader = createReader(file);
+			Page page;
+			while ((page = reader.getNextPage()) != null) {
+				for (int i = 0; i < FIELD_NAMES.length; i++) {
+					bh.consume(page.getBlock(i).getLoadedBlock());
+				}
+				for (int i = 0; i < page.getBlock(0).getPositionCount(); i++) {
 					for (int j = 0; j < 10; j++) {
 						bh.consume(readLong(page.getBlock(j), i));
 					}
@@ -264,29 +291,8 @@ public class PrestoOrcSourceTest {
 					}
 				}
 			}
+			reader.close();
 		}
-		reader.close();
-	}
-
-	@Benchmark
-	public void readFields(Blackhole bh) throws IOException {
-		ConnectorPageSource reader = createReader();
-		Page page;
-		while ((page = reader.getNextPage()) != null) {
-			for (int i = 0; i < FIELD_NAMES.length; i++) {
-				bh.consume(page.getBlock(i).getLoadedBlock());
-			}
-			for (int i = 0; i < page.getBlock(0).getPositionCount(); i++) {
-				for (int j = 0; j < 10; j++) {
-					bh.consume(readLong(page.getBlock(j), i));
-				}
-				bh.consume(readInt(page.getBlock(10), i));
-				for (int j = 11; j < 23; j++) {
-					bh.consume(readDouble(page.getBlock(j), i));
-				}
-			}
-		}
-		reader.close();
 	}
 
 	private int readInt(Block block, int position) {
