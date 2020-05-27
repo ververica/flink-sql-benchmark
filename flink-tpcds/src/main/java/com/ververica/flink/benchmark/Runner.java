@@ -21,10 +21,10 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
-import org.apache.flink.table.api.TableUtils;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 
+import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +75,7 @@ class Runner {
 
 		LOG.info(" begin execute.");
 
-		List<Row> res = TableUtils.collectToList(table);
+		List<Row> res = Lists.newArrayList(table.execute().collect());
 
 		LOG.info(" end execute");
 

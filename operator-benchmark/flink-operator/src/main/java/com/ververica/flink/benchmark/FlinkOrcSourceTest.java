@@ -20,7 +20,7 @@ package com.ververica.flink.benchmark;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.orc.OrcColumnarRowSplitReader;
 import org.apache.flink.orc.nohive.OrcNoHiveSplitReaderUtil;
-import org.apache.flink.table.dataformat.ColumnarRow;
+import org.apache.flink.table.data.ColumnarRowData;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.BigIntType;
 import org.apache.flink.table.types.logical.DoubleType;
@@ -130,7 +130,7 @@ public class FlinkOrcSourceTest {
 		for (File file : new File(FILE_PATH).listFiles()) {
 			OrcColumnarRowSplitReader reader = createReader(file.getAbsolutePath());
 			while (!reader.reachedEnd()) {
-				ColumnarRow row = (ColumnarRow) reader.nextRecord(null);
+				ColumnarRowData row = (ColumnarRowData) reader.nextRecord(null);
 				bh.consume(row);
 				bh.consume(readLong(row, 0));
 			}
@@ -144,7 +144,7 @@ public class FlinkOrcSourceTest {
 			OrcColumnarRowSplitReader reader = createReader(file.getAbsolutePath());
 			int i = 0;
 			while (!reader.reachedEnd()) {
-				ColumnarRow row = (ColumnarRow) reader.nextRecord(null);
+				ColumnarRowData row = (ColumnarRowData) reader.nextRecord(null);
 				bh.consume(row);
 				bh.consume(readLong(row, 0));
 				i++;
@@ -161,7 +161,7 @@ public class FlinkOrcSourceTest {
 		for (File file : new File(FILE_PATH).listFiles()) {
 			OrcColumnarRowSplitReader reader = createReader(file.getAbsolutePath());
 			while (!reader.reachedEnd()) {
-				ColumnarRow row = (ColumnarRow) reader.nextRecord(null);
+				ColumnarRowData row = (ColumnarRowData) reader.nextRecord(null);
 				bh.consume(row);
 				read(bh, row);
 			}
@@ -169,7 +169,7 @@ public class FlinkOrcSourceTest {
 		}
 	}
 
-	private void read(Blackhole bh, ColumnarRow row) {
+	private void read(Blackhole bh, ColumnarRowData row) {
 		bh.consume(readLong(row, 0));
 		bh.consume(readLong(row, 1));
 		bh.consume(readLong(row, 2));
@@ -195,15 +195,15 @@ public class FlinkOrcSourceTest {
 		bh.consume(readDouble(row, 22));
 	}
 
-	private static int readInt(ColumnarRow row, int i) {
+	private static int readInt(ColumnarRowData row, int i) {
 		return !row.isNullAt(i) ? row.getInt(i) : -1;
 	}
 
-	private static double readDouble(ColumnarRow row, int i) {
+	private static double readDouble(ColumnarRowData row, int i) {
 		return !row.isNullAt(i) ? row.getDouble(i) : -1;
 	}
 
-	private static long readLong(ColumnarRow row, int i) {
+	private static long readLong(ColumnarRowData row, int i) {
 		return !row.isNullAt(i) ? row.getLong(i) : -1;
 	}
 

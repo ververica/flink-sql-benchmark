@@ -18,9 +18,10 @@
 package com.ververica.flink.benchmark;
 
 import org.apache.flink.formats.parquet.vector.ParquetColumnarRowSplitReader;
-import org.apache.flink.table.dataformat.BinaryString;
-import org.apache.flink.table.dataformat.ColumnarRow;
-import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch;
+import org.apache.flink.table.data.ColumnarRowData;
+import org.apache.flink.table.data.StringData;
+import org.apache.flink.table.data.binary.BinaryStringData;
+import org.apache.flink.table.data.vector.VectorizedColumnBatch;
 import org.apache.flink.table.types.logical.DateType;
 import org.apache.flink.table.types.logical.DoubleType;
 import org.apache.flink.table.types.logical.LogicalType;
@@ -90,7 +91,7 @@ public class FlinkParquetSourceTest {
 	};
 
 	private ParquetColumnarRowSplitReader createReader() throws IOException {
-		return new ParquetColumnarRowSplitReader(true, new Configuration(), FIELD_TYPES, FIELD_NAMES,
+		return new ParquetColumnarRowSplitReader(true, false, new Configuration(), FIELD_TYPES, FIELD_NAMES,
 				VectorizedColumnBatch::new, 2048, new Path(FILE_PATH), 0, Long.MAX_VALUE);
 	}
 
@@ -98,7 +99,7 @@ public class FlinkParquetSourceTest {
 	public void readVector(Blackhole bh) throws IOException {
 		ParquetColumnarRowSplitReader reader = createReader();
 		while (!reader.reachedEnd()) {
-			ColumnarRow row = reader.nextRecord();
+			ColumnarRowData row = reader.nextRecord();
 			bh.consume(row);
 			bh.consume(readDouble(row, 0));
 		}
@@ -110,7 +111,7 @@ public class FlinkParquetSourceTest {
 		ParquetColumnarRowSplitReader reader = createReader();
 		int i = 0;
 		while (!reader.reachedEnd()) {
-			ColumnarRow row = reader.nextRecord();
+			ColumnarRowData row = reader.nextRecord();
 			bh.consume(row);
 			bh.consume(readDouble(row, 0));
 			i++;
@@ -125,14 +126,14 @@ public class FlinkParquetSourceTest {
 	public void readFields(Blackhole bh) throws IOException {
 		ParquetColumnarRowSplitReader reader = createReader();
 		while (!reader.reachedEnd()) {
-			ColumnarRow row = reader.nextRecord();
+			ColumnarRowData row = reader.nextRecord();
 			bh.consume(row);
 			read(bh, row);
 		}
 		reader.close();
 	}
 
-	private void read(Blackhole bh, ColumnarRow row) {
+	private void read(Blackhole bh, ColumnarRowData row) {
 		bh.consume(readDouble(row, 0));
 		bh.consume(readDouble(row, 1));
 		bh.consume(readDouble(row, 2));
@@ -142,16 +143,16 @@ public class FlinkParquetSourceTest {
 		bh.consume(readInt(row, 6));
 	}
 
-	private static int readInt(ColumnarRow row, int i) {
+	private static int readInt(ColumnarRowData row, int i) {
 		return !row.isNullAt(i) ? row.getInt(i) : -1;
 	}
 
-	private static double readDouble(ColumnarRow row, int i) {
+	private static double readDouble(ColumnarRowData row, int i) {
 		return !row.isNullAt(i) ? row.getDouble(i) : -1;
 	}
 
-	private static BinaryString readString(ColumnarRow row, int i) {
-		return !row.isNullAt(i) ? row.getString(i) : BinaryString.EMPTY_UTF8;
+	private static StringData readString(ColumnarRowData row, int i) {
+		return !row.isNullAt(i) ? row.getString(i) : BinaryStringData.EMPTY_UTF8;
 	}
 
 	public static void main(String[] args) throws RunnerException {
