@@ -40,7 +40,7 @@ under the License.
 
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-connector-hive_2.11</artifactId>
+			<artifactId>flink-connector-hive_2.12</artifactId>
 			<version>${flink.version}</version>
 			<scope>provided</scope>
 		</dependency>
@@ -56,7 +56,7 @@ under the License.
 
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-table-planner-blink_2.11</artifactId>
+			<artifactId>flink-table-planner_2.12</artifactId>
 			<version>${flink.version}</version>
 			<scope>provided</scope>
 		</dependency>

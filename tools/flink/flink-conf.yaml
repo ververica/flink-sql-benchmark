@@ -1,0 +1,61 @@
+jobmanager.heap.size: 24000m
+taskmanager.memory.process.size: 24000m
+slotmanager.number-of-slots.max: 1500
+taskmanager.numberOfTaskSlots: 10
+
+# scheduling strategy
+slotmanager.enable-fixed-slots: true
+cluster.evenly-spread-out-slots: true
+jobmanager.enable-input-location-preferences: false
+
+# tm basic memory settings
+
+# leave some to page cache
+containerized.heap-cutoff-ratio: 0.3
+
+env.java.opts.jobmanager: -Xms20480m -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=70 -XX:+UseCMSInitiatingOccupancyOnly -XX:SoftRefLRUPolicyMSPerMB=0 -XX:+PrintGCDetails -XX:+PrintGCDateStamps
+env.java.opts.taskmanager: -Xms5000m -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=70 -XX:+UseCMSInitiatingOccupancyOnly -XX:SoftRefLRUPolicyMSPerMB=0 -XX:+PrintGCDetails -XX:+PrintGCDateStamps
+
+taskmanager.memory.jvm-metaspace.size: 512m
+taskmanager.memory.managed.size: 12000m
+taskmanager.network.memory.fraction: 0.99
+taskmanager.network.memory.min: 64mb
+taskmanager.network.memory.max: 4096mb
+taskmanager.network.memory.exclusive-buffers-request-timeout-ms: 1000000
+taskmanager.network.blocking-shuffle.compression.enabled: true
+taskmanager.network.blocking-shuffle.type: file
+
+# these two are for 10T
+table.exec.hive.infer-source-parallelism.max: 1500
+table.exec.resource.default-parallelism: 750
+
+table.optimizer.multiple-input-enabled: true
+table.optimizer.join.broadcast-threshold: 10485760
+table.optimizer.reuse-source-enabled: false
+
+table.exec.resource.hash-agg.memory: 128 mb
+table.exec.resource.hash-join.memory: 128 mb
+table.exec.resource.sort.memory: 128 mb
+table.exec.hive.infer-source-parallelism: true
+table.exec.shuffle-mode: batch
+table.exec.sort.default-limit: 200
+
+# some basic configs
+state.backend: filesystem
+state.checkpoints.dir: hdfs://tmp/checkpoint
+akka.ask.timeout: 300 s
+akka.lookup.timeout: 300 s
+akka.tcp.timeout: 300 s
+blob.service.cleanup.interval: 10
+web.timeout: 300000
+heartbeat.timeout: 600000
+resourcemanager.taskmanager-timeout: 900000
+taskmanager.slot.timeout: 600 s
+jobstore.expiration-time: 18000
+jobstore.max-capacity: 110
+jobmanager.execution.failover-strategy: region
+restart-strategy: none
+restart-strategy.fixed-delay.delay: 10 s
+jobmanager.rpc.address: localhost
+jobmanager.rpc.port: 6123
+yarn.containers.vcores: 1

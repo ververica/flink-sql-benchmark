@@ -23,12 +23,12 @@ under the License.
 
   <modelVersion>4.0.0</modelVersion>
 
-<!--  <parent>-->
-<!--		<groupId>com.ververica</groupId>-->
-<!--		<artifactId>flink-sql-benchmark</artifactId>-->
-<!--		<version>0.1-SNAPSHOT</version>-->
-<!--		<relativePath>..</relativePath>-->
-<!--	</parent>-->
+  <parent>
+    <artifactId>flink-sql-benchmark</artifactId>
+    <groupId>com.ververica</groupId>
+    <version>0.1-SNAPSHOT</version>
+    <relativePath>..</relativePath>
+  </parent>
 
   <groupId>com.ververica</groupId>
   <artifactId>hive-tpcds-setup</artifactId>
