@@ -1,74 +1,92 @@
 # flink-sql-benchmark
 
-## TPC-DS benchmark
+## Flink TPC-DS benchmark
 
-### Generate test hive dataset
+### Step 1: Environment prepare
 
-- Step 1: Prepare your environment
-
-  Make sure you have Hadoop and Hive installed in your cluster. `gcc` is also needed to build the TPC-DS data generator.
-
-- Step 2: Build the data generator
-
-  `cd hive-tpcds-setup`
-
-  Run `./tpcds-build.sh`
+- Recommended configuration for Hadoop cluster
+  - Resource allocation
+    - master *1 :
+      - vCPU 32 cores, Memory: 128 GiB /  System disk: 120GB *1, Data disk: 80GB *1
+    - worker *15 :
+      - vCPU 80 cores, Memory: 352 GiB / System disk: 120GB *1, Data disk: 7300GB *30
+    - This document was tested in Hadoop3.2.1 and Hive3.1.2
+  - Hadoop environment prepare
+    - Install Hadoop(3.2.1), and then configure HDFS and Yarn according to `https://hadoop.apache.org/docs/r3.1.2/hadoop-project-dist/hadoop-common/ClusterSetup.html`
+    - Set Hadoop environment variables: `${HADOOP_HOME}` and `${HADOOP_CLASSPATH}`
+    - Configure Yarn, and then start ResourceManager and NodeManager
+      - modify `yarn.application.classpath` in yarn-site, adding mapreduce's dependency to classpath:
+        - `$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*,$HADOOP_YARN_HOME/share/hadoop/mapreduce/*`
+  - Hive environment prepare
+    - Run hive metastore and HiveServer2
+      - Set Hive environment variable: `${HIVE_CONF_DIR}`. This variable equals to the site of `hive-site.xml`.
+      - commands: `nohup hive --service metastore &` / `nohup hive --service hiveservice2 &`
+    - `gcc` is also needed in your cluster
   
-  Download and build the TPC-DS data generator.
+- TPC-DS benchmark project prepare 
+  - Download flink-sql-benchmark project
+    - Method one: download jar
+      - Don't support now
+    - Method two: clone github project, and then package it by yourself
+      - project clone:
+        - `git clone https://github.com/ververica/flink-sql-benchmark.git`
+      - package:
+        - cd project's root directory, run `mvn clean package -DskipTests`
+      - upload the packaged whole project to cluster:
+        - `tar -cvf flink-sql-benchmark.tar master`
+        - `scp flink-sql-benchmark.tar root@xxx.xxx.xxx.xxx:folder`
 
-- Step 3: Generate TPC-DS dataset
+- Flink environment prepare
+    - Download Flink-1.16 to folder `packages` in your packaged flink-sql-benchmark project
+      - Flink download path: `https://flink.apache.org/downloads.html` (recommend FLINK-1.16)
+      - recommend to put Flink project into folder `${INSTALL_PATH}/flink-sql-benchmark/packages`
+    - Replace `flink-conf.yaml`
+      - `mv ${INSTALL_PATH}/flink-sql-benchmark/tools/flink/flink-conf.yaml ${INSTALL_PATH}/flink-sql-benchmark/packages/flink-1.16/conf/flink-conf.yaml`
+    - Upload `flink-sql-connector-hive-3.1.2_2.12`
+      - download `flink-sql-connector-hive-3.1.2_2.12-1.16.0.jar`, and put it to `${INSTALL_PATH}/flink-sql-benchmark/packages/flink-1.16/lib/`
+        - download path: `https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.2_2.12/1.16.0/flink-sql-connector-hive-3.1.2_2.12-1.16.0.jar`
 
-  `cd hive-tpcds-setup`
+### Step 2: Generate TPC-DS dataset
 
-  Run `./tpcds-setup.sh 10000`. The hive database is `tpcds_bin_orc_10000`.
+*Note:* In the following docs, if directory is relative directory, like `tools/common`, its absolute directory is
+`${INSTALL_PATH}/flink-sql-benchmark/` + relative directory, like `${INSTALL_PATH}/flink-sql-benchmark/tools/common`. 
 
-  Run `./tpcds-setup.sh <SCALE_FACTOR>` to generate dataset. The "scale factor" represents how much data you will generate, which roughly translates to gigabytes. For example, `./tpcds-setup.sh 10` will generate about 10GB data. Note that the scale factor must be **greater than 1**.
+- Set common environment variables 
+  - `cd tools/common`, and `vim env.sh`:
+    - None-partitioned table
+      - `SCALE` is the size of the generated dataset (GB). Recommend value is 10000 (10TB)
+        - This variable is recommended to use 1000
+      - `FLINK_TEST_DB` is Hive database name, which will be used by Flink
+        - This variable is recommended to use the default name: `export FLINK_TEST_DB=tpcds_bin_orc_$SCALE`
+    - Partitioned table
+      - `FLINK_TEST_DB` need to be modified to `export FLINK_TEST_DB=tpcds_bin_partitioned_orc_$SCALE`
+- Data generating
+  - None-partitioned table
+    - `cd tools/datagen`, run `./init_hive_db.sh`. `./init_hive_db.sh` will first launch a Mapreduce job to generate the data in text format which is stored in HDFS. Then it will create external Hive databases based on the generated text files.
+      - Origin text format data will be stored in HDFS folder: `/tmp/tpcds-generate/${SCALE}`
+      - Hive external database points to origin text data is: `tpcds_text_${SCALE}`
+      - Hive orc format external database, which points to origin text data is: `tpcds_bin_orc_${SCALE}`
+  - Partitioned table
+    - `cd tools/datagen`, run `./init_partition_db.sh`. If origin text format data don't exist in HDFS, it will create origin file first. Otherwise, it will create external Hive databases with partition tables based on the generated text files.
+    - Origin text format data will also be stored in HDFS folder: `/tmp/tpcds-generate/${SCALE}`
+    - Hive external database points to origin text data is: `tpcds_text_${SCALE}`
+    - Hive orc format external database with partition table, which points to origin text data is: `tpcds_bin_partitioned_orc_${SCALE}`
+      - This command will be very slow because Hive dynamic partition data writing is very slow
 
-  `tpcds-setup.sh` will launch a MapReduce job to generate the data in text format. By default, the generated data will be placed in `/tmp/tpcds-generate/<SCALE_FACTOR>` of your HDFS cluster. If the folder already exists, the MapReduce job will be skipped.
+### Step 3: Generate table statistics for TPC-DS dataset
+- Generate statistics for table and every column:
+  - `cd tools/stats`,  run `./init_stats.sh`
+    - Note: this step use Flink analyze table syntax to generate statistics, so it only supports in Flink-1.16
+    - For partition table, this step is very slow. it's recommend to use Hive analyze table syntax, which will generate same stats with Flink analyze table syntax
+      - The document for Hive analyze table syntax: `https://cwiki.apache.org/confluence/display/hive/statsdev`
+      - In Hive3.x, it can run `ANALYZE TABLE store_sales COMPUTE STATISTICS FOR ALL COLUMNS;` in hive client to generate stats for all partitions instead of specifying one partition
 
-  Once data generation is completed, `tpcds-setup.sh` will load the data into Hive tables. Make sure the `hive` executable is in your `PATH`, alternatively, you can specify your Hive executable path via `HIVE_BIN` environment variable.
+### Step 4: Flink run TPC-DS queries
 
-  `tpcds-setup.sh` will create external Hive tables based on the generated text files. These tables reside in a database named `tpcds_text_<SCALE_FACTOR>`. Then `tpcds-setup.sh` will convert the text tables into an optimized format and the converted tables are placed in database `tpcds_bin_<FORMAT>_<SCALE_FACTOR>`. By default, the optimized format is `orc`. You can choose a different format by setting the `FORMAT` environment variable. The following is an example that creates 1TB test dataset in parquet format:
-
-  `FORMAT=parquet HIVE_BIN=/path/to/hive ./tpcds-setup.sh 1000`
-
-  Once the data is loaded into Hive, you can use database `tpcds_bin_<FORMAT>_<SCALE_FACTOR>`to run the benchmark.
-  
-### Run benchmark in flink
-
-- Step 1: Prepare your flink environment.
-
-  - Prepare flink-conf.yaml: [Recommended Conf](https://github.com/ververica/flink-sql-benchmark/blob/master/flink-tpcds/flink-conf.yaml).
-
-  - Setup hive integration: [Hive dependencies](https://ci.apache.org/projects/flink/flink-docs-master/dev/table/hive/#dependencies).
-  
-  - Setup hadoop integration: [Hadoop environment](https://ci.apache.org/projects/flink/flink-docs-release-1.9/ops/deployment/hadoop.html).
-  
-  - Setup flink cluster: [Standalone cluster](https://ci.apache.org/projects/flink/flink-docs-master/ops/deployment/cluster_setup.html) or [Yarn session](https://ci.apache.org/projects/flink/flink-docs-master/ops/deployment/yarn_setup.html#flink-yarn-session).
-  
-  - Recommended environment for 10T
-    - 20 machines.
-    - Machine: 64 processors. 256GB memory. 1 SSD disk for spill. Multi SATA disks for HDFS.
-  
-- Step 2: Build test jar.
-
-  - Modify flink version and hive version of `pom.xml`.
-  
-  - `mvn clean install`
-  
-- Step 3: Run
-
-  - `flink_home/bin/flink run -c com.ververica.flink.benchmark.Benchmark ./flink-tpcds-0.1-SNAPSHOT-jar-with-dependencies.jar --database tpcds_bin_orc_10000 --hive_conf hive_home/conf`
-  - optional `--location`: sql queries path, default using queries in jar.
-  - optional `--queries`: sql query names. If the value is 'all', all queries will be executed. eg: 'q1.sql'.
-  - optional `--iterations`: The number of iterations that will be run per case, default is 1.
-  - optional `--parallelism`: The parallelism, default is 800.
-  
-### Run benchmark in other systems
-
-Because the prepared test data is standard hive data, other calculation frameworks integrated with hive data can also run benchmark very simply. Please build your own environment and test it.
-
-
-If you have any questions, please contact:
-- Jingsong Lee (jingsonglee0@gmail.com)
-- Rui Li (lirui@apache.org)
+- run single query: `cd tools/flink`, run `./run_query.sh q1.sql 1`
+  - In `./run_query.sh q1.sql 1`, `q1.sql` stands for query number (q1 -> q99). `1` stands for the iterator of execution, which default number is 1
+  - If iterator of execution is `1`, the total execution time will be longer than the query execution time because of Flink cluster warmup time cost 
+- run all queries: `cd tools/flink`, run `./run_all_queries.sh 2`
+  - Because of running all queries will cost a long time, it recommends to run this command in nohup mode: `nohup ./run_all_queries.sh 2 > partition_result.log 2>&1 &`
+- Optional factors： `--warmup`: Flink cluster warmup
+  - For example: `nohup ./run_all_queries.sh 2 warmup > partition_result.log 2>&1 &`
