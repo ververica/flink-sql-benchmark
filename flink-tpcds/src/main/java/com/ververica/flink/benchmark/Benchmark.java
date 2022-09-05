@@ -17,21 +17,18 @@
 
 package com.ververica.flink.benchmark;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.configuration.PipelineOptions;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.ExplainDetail;
 import org.apache.flink.table.api.TableEnvironment;
-import org.apache.flink.table.api.config.ExecutionConfigOptions;
-import org.apache.flink.table.api.config.OptimizerConfigOptions;
 import org.apache.flink.table.catalog.hive.HiveCatalog;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
 import org.apache.hive.common.util.HiveVersionInfo;
 
 import java.util.ArrayList;
@@ -157,17 +154,6 @@ public class Benchmark {
 	private static TableEnvironment setUpEnv(String hiveConf, String database, int parallelism) {
 		EnvironmentSettings settings = EnvironmentSettings.newInstance().inBatchMode().build();
 		TableEnvironment tEnv = TableEnvironment.create(settings);
-
-		tEnv.getConfig().getConfiguration().setBoolean(
-				OptimizerConfigOptions.TABLE_OPTIMIZER_JOIN_REORDER_ENABLED, true);
-		tEnv.getConfig().getConfiguration().setBoolean(
-				OptimizerConfigOptions.TABLE_OPTIMIZER_REUSE_SOURCE_ENABLED, false);
-		tEnv.getConfig().getConfiguration().setLong(
-				OptimizerConfigOptions.TABLE_OPTIMIZER_BROADCAST_JOIN_THRESHOLD, 10485760L);
-		tEnv.getConfig().getConfiguration().setInteger(
-				ExecutionConfigOptions.TABLE_EXEC_RESOURCE_DEFAULT_PARALLELISM, parallelism);
-		tEnv.getConfig().getConfiguration().setInteger(
-				ExecutionConfigOptions.TABLE_EXEC_SORT_DEFAULT_LIMIT, 200);
 
 		tEnv.getConfig().addConfiguration(GlobalConfiguration.loadConfiguration());
 
