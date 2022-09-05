@@ -20,22 +20,31 @@ package com.ververica.flink.benchmark;
 
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.TableException;
+import org.apache.flink.table.catalog.ObjectPath;
+import org.apache.flink.table.catalog.exceptions.TableNotExistException;
 import org.apache.flink.table.catalog.hive.HiveCatalog;
-
+import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hive.common.util.HiveVersionInfo;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 public class UpdateHiveCatalogStats {
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 3) {
-            System.err.println("The args should be: databaseName hiveConfFile statsFile");
+        if (args.length != 2) {
+            System.err.println("The args should be: databaseName hiveConfFile");
             System.exit(1);
             return;
         }
 
         String database = args[0];
         String hiveConf = args[1];
-        String statsFile = args[2];
 
         HiveCatalog catalog =
                 new HiveCatalog("hive", database, hiveConf, HiveVersionInfo.getVersion());
@@ -43,7 +52,59 @@ public class UpdateHiveCatalogStats {
         TableEnvironment tEnv = TableEnvironment.create(environmentSettings);
         tEnv.registerCatalog("hive", catalog);
         tEnv.useCatalog("hive");
-        TpcdsStatsAnalyzer.registerTpcdsStats(tEnv, statsFile);
-        System.out.println("done");
+
+        // flink stats analyze way.
+        registerTpcdsStats(tEnv, catalog, database);
+        System.out.println("Collecting stats done");
+    }
+
+    public static void registerTpcdsStats(
+            TableEnvironment tEnv, HiveCatalog hiveCatalog, String database)
+            throws TableNotExistException, ExecutionException, InterruptedException {
+        System.out.println(String.format("begin to analyze table in database: %s", database));
+        String[] tables = tEnv.listTables();
+        if (tables == null || tables.length == 0) {
+            throw new TableException(
+                    String.format("There are no table exist in %s", tEnv.getCurrentCatalog()));
+        }
+        for (String table : tables) {
+            System.out.println(String.format("Begin to compute statistics for table %s", table));
+            ObjectPath path = new ObjectPath(database, table);
+            Table hiveTable = hiveCatalog.getHiveTable(path);
+            if (!isTablePartitioned(hiveTable)) {
+                tEnv.executeSql(
+                                String.format(
+                                        "ANALYZE TABLE %s COMPUTE STATISTICS FOR ALL COLUMNS", table))
+                        .await();
+                System.out.println(
+                        String.format("Compute statistics for table %s is finished", table));
+            } else {
+                List<String> partitionKeys = getFieldNames(hiveTable.getPartitionKeys());
+                StringBuilder stringBuilder = new StringBuilder();
+                stringBuilder.append(String.format("ANALYZE TABLE %s PARTITION(", table));
+                stringBuilder.append(partitionKeys.stream().collect(Collectors.joining(", ")));
+                stringBuilder.append(") COMPUTE STATISTICS FOR ALL COLUMNS");
+                tEnv.executeSql(stringBuilder.toString()).await();
+                System.out.println(
+                        String.format(
+                                "Compute statistics for partition table %s is finished", table));
+            }
+        }
+    }
+
+    private static List<String> getFieldNames(List<FieldSchema> fieldSchemas) {
+        List<String> names = new ArrayList(fieldSchemas.size());
+        Iterator var2 = fieldSchemas.iterator();
+
+        while (var2.hasNext()) {
+            FieldSchema fs = (FieldSchema) var2.next();
+            names.add(fs.getName());
+        }
+
+        return names;
+    }
+
+    private static boolean isTablePartitioned(Table hiveTable) {
+        return hiveTable.getPartitionKeysSize() != 0;
     }
 }
