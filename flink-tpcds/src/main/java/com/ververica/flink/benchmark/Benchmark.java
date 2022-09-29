@@ -78,11 +78,16 @@ public class Benchmark {
                         line.getOptionValue(LOCATION.getOpt()),
                         line.getOptionValue(QUERIES.getOpt()));
 
-        if ("explain".equals(mode)) {
-            explain(tEnv, queries);
-        } else {
-            run(tEnv, queries, Integer.parseInt(line.getOptionValue(ITERATIONS.getOpt(), "1")));
-        }
+		switch (mode) {
+			case "explain":
+				explain(tEnv, queries);
+				break;
+			case "execute":
+				run(tEnv, queries, Integer.parseInt(line.getOptionValue(ITERATIONS.getOpt(), "1")));
+				break;
+			default:
+				throw new RuntimeException(String.format("Mode '%s' doesn't support now, please changing value of --mode to execute or explain.", mode));
+		}
 	}
 
 	private static void run(TableEnvironment tEnv, LinkedHashMap<String, String> queries, int iterations) {

@@ -65,12 +65,6 @@ under the License.
 			<version>${flink.version}</version>
 		</dependency>
 
-		<dependency>
-			<groupId>org.apache.calcite.avatica</groupId>
-			<artifactId>avatica</artifactId>
-			<version>1.11.0</version>
-		</dependency>
-
 		<!-- Own Dependents -->
 
 		<dependency>

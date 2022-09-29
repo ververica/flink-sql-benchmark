@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-public class UpdateHiveCatalogStats {
+public class AnalyzeTableRunner {
 
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {

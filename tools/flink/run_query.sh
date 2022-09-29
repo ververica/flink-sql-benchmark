@@ -1,5 +1,5 @@
 #!/bin/bash
-source flink_env.sh
+source ../common/flink_env.sh
 export queryStatement=$1
 export num_iters=$2
 

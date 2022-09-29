@@ -1,5 +1,5 @@
 #!/bin/bash
-source flink_env.sh
+source ../common/flink_env.sh
 export num_iters=$1
 
 ${FLINK_HOME}/bin/yarn-session.sh -d -qu default
