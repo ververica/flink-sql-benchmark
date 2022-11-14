@@ -1,0 +1,29 @@
+# Cluster
+slotmanager.number-of-slots.max: 1500
+taskmanager.numberOfTaskSlots: 10
+cluster.evenly-spread-out-slots: true
+
+# Memory
+jobmanager.memory.process.size: 24000m
+taskmanager.memory.process.size: 24000m
+taskmanager.network.memory.fraction: 0.2
+taskmanager.network.memory.max: 4096mb
+## Sort shuffle
+taskmanager.network.memory.floating-buffers-per-gate: 4096
+taskmanager.network.memory.buffers-per-channel: 0
+
+# Table
+table.exec.hive.infer-source-parallelism: true
+table.optimizer.join-reorder-enabled: true
+## For Tpcds 10T
+table.exec.hive.infer-source-parallelism.max: 1500
+table.exec.resource.default-parallelism: 1500
+table.optimizer.join.broadcast-threshold: 10485760
+
+# Basic configs, only for tests
+jobstore.expiration-time: 18000
+env.java.opts.jobmanager: -XX:+PrintGCDetails -XX:+PrintGCDateStamps
+env.java.opts.taskmanager: -XX:+PrintGCDetails -XX:+PrintGCDateStamps
+
+resourcemanager.taskmanager-timeout: 900000
+akka.ask.timeout: 10h

@@ -17,27 +17,26 @@
 
 package com.ververica.flink.benchmark;
 
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.configuration.GlobalConfiguration;
-import org.apache.flink.table.api.EnvironmentSettings;
-import org.apache.flink.table.api.TableEnvironment;
-import org.apache.flink.table.api.config.ExecutionConfigOptions;
-import org.apache.flink.table.api.config.OptimizerConfigOptions;
-import org.apache.flink.table.catalog.hive.HiveCatalog;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.GlobalConfiguration;
+import org.apache.flink.configuration.PipelineOptions;
+import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.ExplainDetail;
+import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.catalog.hive.HiveCatalog;
 import org.apache.hive.common.util.HiveVersionInfo;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-import static java.util.Objects.requireNonNull;
 import static com.ververica.flink.benchmark.QueryUtil.getQueries;
+import static java.util.Objects.requireNonNull;
 
 public class Benchmark {
 
@@ -59,32 +58,58 @@ public class Benchmark {
 	private static final Option PARALLELISM = new Option("p", "parallelism", true,
 			"The parallelism, default is 800.");
 
+    private static final Option MODE =
+            new Option("m", "mode", true, "mode: 'execute' or 'explain'");
+
 	public static void main(String[] args) throws ParseException {
 		Options options = getOptions();
 		DefaultParser parser = new DefaultParser();
 		CommandLine line = parser.parse(options, args, true);
-		run(
-				setUpEnv(
-						requireNonNull(line.getOptionValue(HIVE_CONF.getOpt())),
-						requireNonNull(line.getOptionValue(DATABASE.getOpt())),
-						Integer.parseInt(line.getOptionValue(PARALLELISM.getOpt(), "800"))
-				),
-				getQueries(
-						line.getOptionValue(LOCATION.getOpt()),
-						line.getOptionValue(QUERIES.getOpt())),
-				Integer.parseInt(line.getOptionValue(ITERATIONS.getOpt(), "1"))
-		);
+        System.out.println("args: " + String.join(" ", args));
+
+        String mode = line.getOptionValue(MODE.getOpt(), "execute");
+        TableEnvironment tEnv =
+                setUpEnv(
+                        requireNonNull(line.getOptionValue(HIVE_CONF.getOpt())),
+                        requireNonNull(line.getOptionValue(DATABASE.getOpt())),
+                        Integer.parseInt(line.getOptionValue(PARALLELISM.getOpt(), "800")));
+        LinkedHashMap<String, String> queries =
+                getQueries(
+                        line.getOptionValue(LOCATION.getOpt()),
+                        line.getOptionValue(QUERIES.getOpt()));
+
+		switch (mode) {
+			case "explain":
+				explain(tEnv, queries);
+				break;
+			case "execute":
+				run(tEnv, queries, Integer.parseInt(line.getOptionValue(ITERATIONS.getOpt(), "1")));
+				break;
+			default:
+				throw new RuntimeException(String.format("Mode '%s' doesn't support now, please changing value of --mode to execute or explain.", mode));
+		}
 	}
 
 	private static void run(TableEnvironment tEnv, LinkedHashMap<String, String> queries, int iterations) {
 		List<Tuple2<String, Long>> bestArray = new ArrayList<>();
 		queries.forEach((name, sql) -> {
+			tEnv.getConfig().getConfiguration().set(PipelineOptions.NAME, name);
 			System.out.println("Start run query: " + name);
 			Runner runner = new Runner(name, sql, iterations, tEnv);
 			runner.run(bestArray);
 		});
 		printSummary(bestArray);
 	}
+
+    private static void explain(TableEnvironment tEnv, LinkedHashMap<String, String> queries) {
+        List<Tuple2<String, Long>> bestArray = new ArrayList<>();
+        queries.forEach(
+                (name, sql) -> {
+                    System.out.println("Start explain query: " + name);
+                    System.out.println(tEnv.explainSql(sql, ExplainDetail.ESTIMATED_COST));
+                });
+        printSummary(bestArray);
+    }
 
 	private static void printSummary(List<Tuple2<String, Long>> bestArray) {
 		if (bestArray.isEmpty()) {
@@ -132,19 +157,8 @@ public class Benchmark {
 	}
 
 	private static TableEnvironment setUpEnv(String hiveConf, String database, int parallelism) {
-		EnvironmentSettings settings = EnvironmentSettings.newInstance().useBlinkPlanner().inBatchMode().build();
+		EnvironmentSettings settings = EnvironmentSettings.newInstance().inBatchMode().build();
 		TableEnvironment tEnv = TableEnvironment.create(settings);
-
-		tEnv.getConfig().getConfiguration().setBoolean(
-				OptimizerConfigOptions.TABLE_OPTIMIZER_JOIN_REORDER_ENABLED, true);
-		tEnv.getConfig().getConfiguration().setBoolean(
-				OptimizerConfigOptions.TABLE_OPTIMIZER_REUSE_SOURCE_ENABLED, false);
-		tEnv.getConfig().getConfiguration().setLong(
-				OptimizerConfigOptions.TABLE_OPTIMIZER_BROADCAST_JOIN_THRESHOLD, 10485760L);
-		tEnv.getConfig().getConfiguration().setInteger(
-				ExecutionConfigOptions.TABLE_EXEC_RESOURCE_DEFAULT_PARALLELISM, parallelism);
-		tEnv.getConfig().getConfiguration().setInteger(
-				ExecutionConfigOptions.TABLE_EXEC_SORT_DEFAULT_LIMIT, 200);
 
 		tEnv.getConfig().addConfiguration(GlobalConfiguration.loadConfiguration());
 
@@ -162,6 +176,7 @@ public class Benchmark {
 		options.addOption(QUERIES);
 		options.addOption(ITERATIONS);
 		options.addOption(PARALLELISM);
+        options.addOption(MODE);
 		return options;
 	}
 }
