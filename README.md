@@ -53,7 +53,9 @@
 - Step 2: Build test jar.
 
   - Modify flink version and hive version of `pom.xml`.
-  
+
+    Notice：flink version should use x.y.z such as 1.11.2 .
+
   - `mvn clean install`
   
 - Step 3: Run
